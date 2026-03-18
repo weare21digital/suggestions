@@ -1,4 +1,5 @@
 import { SuggestionService, SuggestionServiceError, ERROR_CODES } from '../lib/suggestion-service';
+import { validateScreenshot } from '../lib/screenshot-validation';
 
 /**
  * Helper to create Next.js App Router handlers for user-facing suggestions API.
@@ -44,6 +45,14 @@ export function createSuggestionsHandler(
       const { type, title, description, entityType, entityId, entityLabel, category, screenshot } = await request.json();
       if (!type || !title || !description) {
         return Response.json({ error: 'Type, title, and description are required' }, { status: 400 });
+      }
+
+      // Validate screenshot if provided
+      if (screenshot) {
+        const validation = validateScreenshot(screenshot);
+        if (!validation.valid) {
+          return Response.json({ error: validation.error }, { status: 400 });
+        }
       }
 
       const suggestion = await service.createSuggestion(
