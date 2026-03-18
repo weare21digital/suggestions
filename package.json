@@ -1,0 +1,36 @@
+{
+  "name": "@21digital/suggestions",
+  "version": "1.0.0",
+  "description": "Reusable suggestions/feedback system with floating FAB, modal UI, admin tools, and store-agnostic backend",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./client": "./client/index.ts",
+    "./client/admin": "./client/admin/index.ts",
+    "./server/suggestions-handler": "./server/suggestions-handler.ts",
+    "./server/admin-suggestions-handler": "./server/admin-suggestions-handler.ts",
+    "./lib/types": "./lib/types.ts",
+    "./lib/parse-replies": "./lib/parse-replies.ts",
+    "./lib/suggestion-service": "./lib/suggestion-service.ts"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "keywords": [
+    "suggestions",
+    "feedback",
+    "fab",
+    "modal",
+    "admin",
+    "react",
+    "nextjs",
+    "typescript"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react": ">=18.0.0",
+    "@types/react-dom": ">=18.0.0"
+  }
+}

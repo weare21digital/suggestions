@@ -1,0 +1,204 @@
+// @21digital/suggestions - Core Types
+
+export type SuggestionType = 'suggestion' | 'bug';
+
+export type SuggestionStatus =
+  | 'open'
+  | 'reviewing'
+  | 'planned'
+  | 'implemented'
+  | 'declined';
+
+export interface Suggestion {
+  id: number;
+  userId: string;
+  type: SuggestionType;
+  title: string;
+  description: string;
+  status: SuggestionStatus;
+  adminReply: string | null;
+  repliedAt: Date | string | null;
+  createdAt: Date | string;
+  entityType?: string | null;
+  entityId?: string | null;
+  entityLabel?: string | null;
+  category?: string | null;
+  screenshot?: string | null;
+}
+
+export interface SuggestionWithEmail extends Suggestion {
+  userEmail: string;
+}
+
+export interface ParsedReply {
+  timestamp: string;
+  content: string;
+}
+
+export interface RateLimitResult {
+  canSubmit: boolean;
+  cooldownEndsAt: Date | null;
+  minutesRemaining: number;
+}
+
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface AdminListResponse {
+  suggestions: SuggestionWithEmail[];
+  pagination: PaginationInfo;
+}
+
+/**
+ * Store interface — host app implements this with their DB (Prisma, Drizzle, etc.)
+ */
+export interface SuggestionStore {
+  /** Create a new suggestion. Returns the created record. */
+  create(data: {
+    userId: string;
+    type: SuggestionType;
+    title: string;
+    description: string;
+    status: SuggestionStatus;
+    entityType?: string | null;
+    entityId?: string | null;
+    entityLabel?: string | null;
+    category?: string | null;
+    screenshot?: string | null;
+  }): Promise<Suggestion>;
+
+  /** Find the most recent open suggestion by user (for rate limiting). */
+  findMostRecentOpen(userId: string): Promise<Suggestion | null>;
+
+  /** Get all suggestions for a user, ordered by createdAt desc. */
+  findByUser(userId: string): Promise<Suggestion[]>;
+
+  /** Find suggestion by ID. */
+  findById(id: number): Promise<Suggestion | null>;
+
+  /** Update a suggestion. Returns the updated record. */
+  update(
+    id: number,
+    data: Partial<
+      Pick<Suggestion, 'status' | 'adminReply' | 'repliedAt'>
+    >
+  ): Promise<Suggestion>;
+
+  /** Admin list with filtering, search, pagination. Returns suggestions with user email. */
+  findAll(opts: {
+    status?: string;
+    search?: string;
+    page: number;
+    limit: number;
+  }): Promise<{ suggestions: SuggestionWithEmail[]; totalCount: number }>;
+}
+
+/**
+ * Configuration for the suggestions system.
+ */
+export interface SuggestionsConfig {
+  /** Rate limit cooldown in hours. Default: 1 */
+  rateLimitHours?: number;
+  /** Max title length. Default: 255 */
+  maxTitleLength?: number;
+  /** Max description length. Default: 5000 */
+  maxDescriptionLength?: number;
+  /** Min description length. Default: 100 */
+  minDescriptionLength?: number;
+  /** Valid suggestion types. Default: ['suggestion', 'bug'] */
+  types?: SuggestionType[];
+  /** Valid statuses. Default: all SuggestionStatus values */
+  statuses?: SuggestionStatus[];
+  /** Callback when a new suggestion is created */
+  onNewSuggestion?: (suggestion: Suggestion, userEmail?: string) => void;
+  /** Callback when status changes */
+  onStatusChange?: (
+    suggestion: Suggestion,
+    oldStatus: SuggestionStatus,
+    newStatus: SuggestionStatus
+  ) => void;
+}
+
+/**
+ * Labels for i18n — host app provides these. Sensible defaults included.
+ */
+export interface SuggestionsLabels {
+  fabAriaLabel?: string;
+  fabTitle?: string;
+  closeModal?: string;
+  submitNew?: string;
+  mySuggestions?: string;
+  typeLabel?: string;
+  typeSuggestion?: string;
+  typeBug?: string;
+  titleLabel?: string;
+  titlePlaceholder?: string;
+  descriptionLabel?: string;
+  descriptionPlaceholder?: string;
+  submit?: string;
+  submitting?: string;
+  submitted?: string;
+  loginRequired?: string;
+  titleRequired?: string;
+  descriptionTooShort?: string;
+  submitFailed?: string;
+  loadFailed?: string;
+  noSuggestions?: string;
+  noSuggestionsSubtext?: string;
+  loginToView?: string;
+  previous?: string;
+  next?: string;
+  adminReplies?: string;
+  charactersCount?: string;
+  charactersMinimum?: string;
+  submittedOn?: string;
+  page?: string;
+}
+
+export const DEFAULT_LABELS: Required<SuggestionsLabels> = {
+  fabAriaLabel: 'Submit a suggestion',
+  fabTitle: 'Got an idea? Let us know!',
+  closeModal: 'Close',
+  submitNew: 'Submit New',
+  mySuggestions: 'My Suggestions',
+  typeLabel: 'What type of feedback?',
+  typeSuggestion: '💡 Suggestion',
+  typeBug: '🐛 Bug Report',
+  titleLabel: 'Title',
+  titlePlaceholder: 'Brief summary of your idea...',
+  descriptionLabel: 'Description',
+  descriptionPlaceholder: 'Describe your suggestion in detail...',
+  submit: 'Submit',
+  submitting: 'Submitting...',
+  submitted: 'Thank you! Your suggestion has been submitted.',
+  loginRequired: 'Please sign in to submit suggestions.',
+  titleRequired: 'Title is required.',
+  descriptionTooShort: 'Description must be at least {min} characters.',
+  submitFailed: 'Failed to submit. Please try again.',
+  loadFailed: 'Failed to load suggestions.',
+  noSuggestions: 'No suggestions yet.',
+  noSuggestionsSubtext: 'Submit your first idea using the form!',
+  loginToView: 'Sign in to view your suggestions.',
+  previous: 'Previous',
+  next: 'Next',
+  adminReplies: 'Admin Replies ({count})',
+  charactersCount: '{count} / {max}',
+  charactersMinimum: '{count} / {min} minimum',
+  submittedOn: 'Submitted on {date}',
+  page: 'Page {current} of {total}',
+};
+
+export const DEFAULT_CONFIG: Required<SuggestionsConfig> = {
+  rateLimitHours: 1,
+  maxTitleLength: 255,
+  maxDescriptionLength: 5000,
+  minDescriptionLength: 100,
+  types: ['suggestion', 'bug'],
+  statuses: ['open', 'reviewing', 'planned', 'implemented', 'declined'],
+  onNewSuggestion: () => {},
+  onStatusChange: () => {},
+};

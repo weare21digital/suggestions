@@ -1,0 +1,322 @@
+import type {
+  Suggestion,
+  SuggestionStore,
+  SuggestionsConfig,
+  SuggestionType,
+  SuggestionStatus,
+  RateLimitResult,
+  DEFAULT_CONFIG,
+} from './types';
+
+export class SuggestionServiceError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public data?: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = 'SuggestionServiceError';
+  }
+}
+
+export const ERROR_CODES = {
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+  INVALID_TYPE: 'INVALID_TYPE',
+  TITLE_REQUIRED: 'TITLE_REQUIRED',
+  TITLE_TOO_LONG: 'TITLE_TOO_LONG',
+  DESCRIPTION_REQUIRED: 'DESCRIPTION_REQUIRED',
+  DESCRIPTION_TOO_SHORT: 'DESCRIPTION_TOO_SHORT',
+  DESCRIPTION_TOO_LONG: 'DESCRIPTION_TOO_LONG',
+  NOT_FOUND: 'NOT_FOUND',
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
+  INVALID_STATUS: 'INVALID_STATUS',
+} as const;
+
+export class SuggestionService {
+  private store: SuggestionStore;
+  private config: Required<SuggestionsConfig>;
+
+  constructor(store: SuggestionStore, config?: SuggestionsConfig) {
+    this.store = store;
+    this.config = {
+      rateLimitHours: config?.rateLimitHours ?? 1,
+      maxTitleLength: config?.maxTitleLength ?? 255,
+      maxDescriptionLength: config?.maxDescriptionLength ?? 5000,
+      minDescriptionLength: config?.minDescriptionLength ?? 100,
+      types: config?.types ?? ['suggestion', 'bug'],
+      statuses: config?.statuses ?? [
+        'open',
+        'reviewing',
+        'planned',
+        'implemented',
+        'declined',
+      ],
+      onNewSuggestion: config?.onNewSuggestion ?? (() => {}),
+      onStatusChange: config?.onStatusChange ?? (() => {}),
+    };
+  }
+
+  async canSubmit(userId: string): Promise<RateLimitResult> {
+    const recent = await this.store.findMostRecentOpen(userId);
+    if (!recent) {
+      return { canSubmit: true, cooldownEndsAt: null, minutesRemaining: 0 };
+    }
+
+    const createdAt =
+      typeof recent.createdAt === 'string'
+        ? new Date(recent.createdAt)
+        : recent.createdAt;
+    const hoursSince =
+      (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+
+    if (hoursSince < this.config.rateLimitHours) {
+      const cooldownEndsAt = new Date(
+        createdAt.getTime() + this.config.rateLimitHours * 60 * 60 * 1000
+      );
+      const minutesRemaining = Math.ceil(
+        (cooldownEndsAt.getTime() - Date.now()) / (1000 * 60)
+      );
+      return { canSubmit: false, cooldownEndsAt, minutesRemaining };
+    }
+
+    return { canSubmit: true, cooldownEndsAt: null, minutesRemaining: 0 };
+  }
+
+  async createSuggestion(
+    userId: string,
+    type: string,
+    title: string,
+    description: string,
+    opts?: {
+      skipRateLimit?: boolean;
+      userEmail?: string;
+      entityType?: string | null;
+      entityId?: string | null;
+      entityLabel?: string | null;
+      category?: string | null;
+      screenshot?: string | null;
+    }
+  ): Promise<Suggestion> {
+    // Validate type
+    if (!this.config.types.includes(type as SuggestionType)) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.INVALID_TYPE,
+        `Invalid type: ${type}`
+      );
+    }
+
+    // Validate title
+    if (!title || title.trim().length === 0) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.TITLE_REQUIRED,
+        'Title is required'
+      );
+    }
+    if (title.length > this.config.maxTitleLength) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.TITLE_TOO_LONG,
+        'Title too long',
+        { maxLength: this.config.maxTitleLength }
+      );
+    }
+
+    // Validate description
+    if (!description || description.trim().length === 0) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.DESCRIPTION_REQUIRED,
+        'Description is required'
+      );
+    }
+    if (description.trim().length < this.config.minDescriptionLength) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.DESCRIPTION_TOO_SHORT,
+        'Description too short',
+        { minLength: this.config.minDescriptionLength }
+      );
+    }
+    if (description.length > this.config.maxDescriptionLength) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.DESCRIPTION_TOO_LONG,
+        'Description too long',
+        { maxLength: this.config.maxDescriptionLength }
+      );
+    }
+
+    // Rate limit check
+    if (!opts?.skipRateLimit) {
+      const rateCheck = await this.canSubmit(userId);
+      if (!rateCheck.canSubmit) {
+        throw new SuggestionServiceError(
+          ERROR_CODES.RATE_LIMIT_EXCEEDED,
+          'Rate limit exceeded',
+          { minutesRemaining: rateCheck.minutesRemaining }
+        );
+      }
+    }
+
+    const suggestion = await this.store.create({
+      userId,
+      type: type as SuggestionType,
+      title: title.trim(),
+      description: description.trim(),
+      status: 'open',
+      entityType: opts?.entityType,
+      entityId: opts?.entityId,
+      entityLabel: opts?.entityLabel,
+      category: opts?.category,
+      screenshot: opts?.screenshot,
+    });
+
+    // Fire callback (non-blocking)
+    try {
+      this.config.onNewSuggestion(suggestion, opts?.userEmail);
+    } catch (e) {
+      console.error('[SuggestionService] onNewSuggestion callback error:', e);
+    }
+
+    return suggestion;
+  }
+
+  async getUserSuggestions(userId: string): Promise<Suggestion[]> {
+    return this.store.findByUser(userId);
+  }
+
+  async getSuggestionById(
+    id: number,
+    userId?: string
+  ): Promise<Suggestion> {
+    const suggestion = await this.store.findById(id);
+    if (!suggestion) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.NOT_FOUND,
+        'Suggestion not found'
+      );
+    }
+    if (userId && suggestion.userId !== userId) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.PERMISSION_DENIED,
+        'Permission denied'
+      );
+    }
+    return suggestion;
+  }
+
+  async updateStatus(
+    id: number,
+    status: string
+  ): Promise<Suggestion> {
+    if (!this.config.statuses.includes(status as SuggestionStatus)) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.INVALID_STATUS,
+        `Invalid status: ${status}`
+      );
+    }
+
+    const existing = await this.store.findById(id);
+    if (!existing) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.NOT_FOUND,
+        'Suggestion not found'
+      );
+    }
+
+    const oldStatus = existing.status;
+    const updated = await this.store.update(id, {
+      status: status as SuggestionStatus,
+    });
+
+    // Fire callback (non-blocking)
+    try {
+      this.config.onStatusChange(
+        updated,
+        oldStatus,
+        status as SuggestionStatus
+      );
+    } catch (e) {
+      console.error('[SuggestionService] onStatusChange callback error:', e);
+    }
+
+    return updated;
+  }
+
+  async addReply(id: number, replyText: string): Promise<Suggestion> {
+    if (!replyText || !replyText.trim()) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.DESCRIPTION_REQUIRED,
+        'Reply cannot be empty'
+      );
+    }
+
+    const existing = await this.store.findById(id);
+    if (!existing) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.NOT_FOUND,
+        'Suggestion not found'
+      );
+    }
+
+    const now = new Date();
+    const timestamp = now.toLocaleString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+
+    const formattedReply = `[REPLY_DELIMITER]\n[${timestamp}] ${replyText.trim()}`;
+    const newAdminReply = existing.adminReply
+      ? existing.adminReply + '\n' + formattedReply
+      : formattedReply;
+
+    return this.store.update(id, {
+      adminReply: newAdminReply,
+      repliedAt: now,
+    });
+  }
+
+  async replaceReplies(
+    id: number,
+    rawReplyText: string
+  ): Promise<Suggestion> {
+    const existing = await this.store.findById(id);
+    if (!existing) {
+      throw new SuggestionServiceError(
+        ERROR_CODES.NOT_FOUND,
+        'Suggestion not found'
+      );
+    }
+
+    return this.store.update(id, {
+      adminReply: rawReplyText.trim() || null,
+      repliedAt: rawReplyText.trim() ? new Date() : null,
+    });
+  }
+
+  async adminList(opts: {
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = opts.page ?? 1;
+    const limit = opts.limit ?? 20;
+    const { suggestions, totalCount } = await this.store.findAll({
+      status: opts.status,
+      search: opts.search,
+      page,
+      limit,
+    });
+
+    return {
+      suggestions,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    };
+  }
+}

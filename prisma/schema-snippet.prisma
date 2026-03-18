@@ -1,0 +1,20 @@
+// Add this model to your Prisma schema.
+// Adjust the User relation to match your auth setup.
+
+model Suggestion {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  type        String    @default("suggestion") // "suggestion" | "bug"
+  title       String    @db.VarChar(255)
+  description String    @db.Text
+  status      String    @default("open") // open | reviewing | planned | implemented | declined
+  adminReply  String?   @db.Text
+  repliedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  // Uncomment and adjust if you have a User model:
+  // user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
