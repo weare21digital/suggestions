@@ -1,18 +1,46 @@
 {
   "name": "@21digital/suggestions",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Reusable suggestions/feedback system with floating FAB, modal UI, admin tools, and store-agnostic backend",
-  "main": "index.ts",
-  "types": "index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./index.ts",
-    "./client": "./client/index.ts",
-    "./client/admin": "./client/admin/index.ts",
-    "./server/suggestions-handler": "./server/suggestions-handler.ts",
-    "./server/admin-suggestions-handler": "./server/admin-suggestions-handler.ts",
-    "./lib/types": "./lib/types.ts",
-    "./lib/parse-replies": "./lib/parse-replies.ts",
-    "./lib/suggestion-service": "./lib/suggestion-service.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./client/admin": {
+      "types": "./dist/client/admin/index.d.ts",
+      "default": "./dist/client/admin/index.js"
+    },
+    "./server/suggestions-handler": {
+      "types": "./dist/server/suggestions-handler.d.ts",
+      "default": "./dist/server/suggestions-handler.js"
+    },
+    "./server/admin-suggestions-handler": {
+      "types": "./dist/server/admin-suggestions-handler.d.ts",
+      "default": "./dist/server/admin-suggestions-handler.js"
+    },
+    "./lib/types": {
+      "types": "./dist/lib/types.d.ts",
+      "default": "./dist/lib/types.js"
+    },
+    "./lib/parse-replies": {
+      "types": "./dist/lib/parse-replies.d.ts",
+      "default": "./dist/lib/parse-replies.js"
+    },
+    "./lib/suggestion-service": {
+      "types": "./dist/lib/suggestion-service.d.ts",
+      "default": "./dist/lib/suggestion-service.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
@@ -30,7 +58,9 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "@types/react": ">=18.0.0",
-    "@types/react-dom": ">=18.0.0"
+    "@types/react-dom": ">=18.0.0",
+    "typescript": "^5.9.3"
   }
 }
