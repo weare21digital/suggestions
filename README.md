@@ -184,6 +184,25 @@ Pass custom labels via the `labels` prop:
 />
 ```
 
+## Development
+
+Ships TypeScript source, compiles to JS via `prepare` hook on install.
+
+- **Consumers:** just `npm install` — compilation is automatic (the `prepare` script runs `tsc`)
+- **To develop:** edit source files, then run `npm run build`
+- **`dist/` is gitignored** — never committed, built fresh on every install
+
+### Plugin pattern
+
+All `@21digital/*` plugins follow this convention:
+- Source: `.ts` / `.tsx` files
+- Compiled output: `dist/*.js` + `dist/*.d.ts`
+- `package.json` exports point to `dist/` (not source)
+- `prepare` hook ensures auto-compilation on `npm install`
+- `tsconfig.json` with `outDir: "dist"`
+
+When creating new plugins, follow this same pattern to avoid Turbopack/bundler compatibility issues.
+
 ## Architecture
 
 ```
