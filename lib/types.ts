@@ -74,6 +74,9 @@ export interface SuggestionStore {
   /** Find the most recent open suggestion by user (for rate limiting). */
   findMostRecentOpen(userId: string): Promise<Suggestion | null>;
 
+  /** Count submissions by user within a time window (for rolling window rate limiting). */
+  countRecentSubmissions(userId: string, sinceDate: Date): Promise<number>;
+
   /** Get all suggestions for a user, ordered by createdAt desc. */
   findByUser(userId: string): Promise<Suggestion[]>;
 
@@ -101,8 +104,17 @@ export interface SuggestionStore {
  * Configuration for the suggestions system.
  */
 export interface SuggestionsConfig {
-  /** Rate limit cooldown in hours. Default: 1 */
+  /** DEPRECATED: Use rateLimit.maxPerWindow + rateLimit.windowHours instead. Legacy rate limit cooldown in hours. Default: 1 */
   rateLimitHours?: number;
+  /** Rate limit configuration (rolling window + minimum gap) */
+  rateLimit?: {
+    /** Max submissions per rolling window. Default: 5 */
+    maxPerWindow?: number;
+    /** Rolling window in hours. Default: 24 */
+    windowHours?: number;
+    /** Minimum gap between any two submissions in minutes. Default: 0 */
+    minGapMinutes?: number;
+  };
   /** Max title length. Default: 255 */
   maxTitleLength?: number;
   /** Max description length. Default: 5000 */
@@ -192,8 +204,12 @@ export const DEFAULT_LABELS: Required<SuggestionsLabels> = {
   page: 'Page {current} of {total}',
 };
 
-export const DEFAULT_CONFIG: Required<SuggestionsConfig> = {
-  rateLimitHours: 1,
+export const DEFAULT_CONFIG: Required<Omit<SuggestionsConfig, 'rateLimitHours'>> = {
+  rateLimit: {
+    maxPerWindow: 5,
+    windowHours: 24,
+    minGapMinutes: 0,
+  },
   maxTitleLength: 255,
   maxDescriptionLength: 5000,
   minDescriptionLength: 100,

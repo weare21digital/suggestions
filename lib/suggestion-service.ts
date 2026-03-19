@@ -34,12 +34,46 @@ export const ERROR_CODES = {
 
 export class SuggestionService {
   private store: SuggestionStore;
-  private config: Required<SuggestionsConfig>;
+  private config: {
+    rateLimit: {
+      maxPerWindow: number;
+      windowHours: number;
+      minGapMinutes: number;
+    };
+    maxTitleLength: number;
+    maxDescriptionLength: number;
+    minDescriptionLength: number;
+    types: SuggestionType[];
+    statuses: SuggestionStatus[];
+    onNewSuggestion: (suggestion: Suggestion, userEmail?: string) => void;
+    onStatusChange: (
+      suggestion: Suggestion,
+      oldStatus: SuggestionStatus,
+      newStatus: SuggestionStatus
+    ) => void;
+  };
 
   constructor(store: SuggestionStore, config?: SuggestionsConfig) {
     this.store = store;
+    
+    // Handle legacy rateLimitHours config (backwards compat)
+    let rateLimit = config?.rateLimit ?? {
+      maxPerWindow: 5,
+      windowHours: 24,
+      minGapMinutes: 0,
+    };
+    
+    // If legacy rateLimitHours is set and rateLimit is not, convert it
+    if (config?.rateLimitHours && !config?.rateLimit) {
+      rateLimit = {
+        maxPerWindow: 1,
+        windowHours: config.rateLimitHours,
+        minGapMinutes: 0,
+      };
+    }
+    
     this.config = {
-      rateLimitHours: config?.rateLimitHours ?? 1,
+      rateLimit,
       maxTitleLength: config?.maxTitleLength ?? 255,
       maxDescriptionLength: config?.maxDescriptionLength ?? 5000,
       minDescriptionLength: config?.minDescriptionLength ?? 100,
@@ -57,22 +91,39 @@ export class SuggestionService {
   }
 
   async canSubmit(userId: string): Promise<RateLimitResult> {
-    const recent = await this.store.findMostRecentOpen(userId);
-    if (!recent) {
-      return { canSubmit: true, cooldownEndsAt: null, minutesRemaining: 0 };
+    const { maxPerWindow, windowHours, minGapMinutes } = this.config.rateLimit;
+    
+    // Check 1: Minimum gap between submissions (if configured)
+    if (minGapMinutes > 0) {
+      const recent = await this.store.findMostRecentOpen(userId);
+      if (recent) {
+        const createdAt =
+          typeof recent.createdAt === 'string'
+            ? new Date(recent.createdAt)
+            : recent.createdAt;
+        const minutesSince =
+          (Date.now() - createdAt.getTime()) / (1000 * 60);
+
+        if (minutesSince < minGapMinutes) {
+          const cooldownEndsAt = new Date(
+            createdAt.getTime() + minGapMinutes * 60 * 1000
+          );
+          const minutesRemaining = Math.ceil(
+            (cooldownEndsAt.getTime() - Date.now()) / (1000 * 60)
+          );
+          return { canSubmit: false, cooldownEndsAt, minutesRemaining };
+        }
+      }
     }
-
-    const createdAt =
-      typeof recent.createdAt === 'string'
-        ? new Date(recent.createdAt)
-        : recent.createdAt;
-    const hoursSince =
-      (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
-
-    if (hoursSince < this.config.rateLimitHours) {
-      const cooldownEndsAt = new Date(
-        createdAt.getTime() + this.config.rateLimitHours * 60 * 60 * 1000
-      );
+    
+    // Check 2: Rolling window limit (maxPerWindow per windowHours)
+    const windowStart = new Date(Date.now() - windowHours * 60 * 60 * 1000);
+    const countInWindow = await this.store.countRecentSubmissions(userId, windowStart);
+    
+    if (countInWindow >= maxPerWindow) {
+      // Find the oldest submission in the window to calculate when the limit resets
+      // We'll estimate based on the window — the limit resets when the oldest submission falls out
+      const cooldownEndsAt = new Date(Date.now() + 60 * 60 * 1000); // Estimate: 1 hour from now
       const minutesRemaining = Math.ceil(
         (cooldownEndsAt.getTime() - Date.now()) / (1000 * 60)
       );
