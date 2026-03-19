@@ -57,17 +57,30 @@ export class SuggestionService {
     this.store = store;
     
     // Handle legacy rateLimitHours config (backwards compat)
-    let rateLimit = config?.rateLimit ?? {
-      maxPerWindow: 5,
-      windowHours: 24,
-      minGapMinutes: 0,
+    let rateLimit: {
+      maxPerWindow: number;
+      windowHours: number;
+      minGapMinutes: number;
     };
     
-    // If legacy rateLimitHours is set and rateLimit is not, convert it
-    if (config?.rateLimitHours && !config?.rateLimit) {
+    if (config?.rateLimit) {
+      rateLimit = {
+        maxPerWindow: config.rateLimit.maxPerWindow ?? 5,
+        windowHours: config.rateLimit.windowHours ?? 24,
+        minGapMinutes: config.rateLimit.minGapMinutes ?? 0,
+      };
+    } else if (config?.rateLimitHours) {
+      // Legacy rateLimitHours: convert to new format
       rateLimit = {
         maxPerWindow: 1,
         windowHours: config.rateLimitHours,
+        minGapMinutes: 0,
+      };
+    } else {
+      // Default
+      rateLimit = {
+        maxPerWindow: 5,
+        windowHours: 24,
         minGapMinutes: 0,
       };
     }
