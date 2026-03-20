@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SuggestionsModal } from './SuggestionsModal';
+import { useSuggestionsModal } from './SuggestionsProvider';
 import type { SuggestionsLabels } from '../lib/types';
 import { DEFAULT_LABELS } from '../lib/types';
 
 export interface SuggestionsFabProps {
-  /** Whether user is authenticated */
-  isAuthenticated: boolean;
-  /** Current user ID */
+  /** @deprecated No longer used — auth is handled by SuggestionsProvider */
+  isAuthenticated?: boolean;
+  /** @deprecated No longer used — handled by SuggestionsProvider */
   userId?: string;
-  /** Whether current user is admin */
+  /** @deprecated No longer used — handled by SuggestionsProvider */
   isAdmin?: boolean;
-  /** API base path for suggestions endpoints. Default: '/api/suggestions' */
+  /** @deprecated No longer used — handled by SuggestionsProvider */
   apiBasePath?: string;
   /** Primary color for the FAB gradient (from). Default: '#0d9488' (teal) */
   primaryColor?: string;
@@ -24,9 +24,9 @@ export interface SuggestionsFabProps {
   labels?: Partial<SuggestionsLabels>;
   /** Jiggle interval in ms. Default: 30000 */
   jiggleInterval?: number;
-  /** Optional login component rendered when user is not authenticated */
+  /** @deprecated No longer used — handled by SuggestionsProvider */
   loginComponent?: React.ReactNode;
-  /** Authorization header value for API calls */
+  /** @deprecated No longer used — handled by SuggestionsProvider */
   authHeader?: string;
   /** Additional className for the FAB button */
   className?: string;
@@ -35,22 +35,16 @@ export interface SuggestionsFabProps {
 }
 
 export function SuggestionsFab({
-  isAuthenticated,
-  userId,
-  isAdmin,
-  apiBasePath = '/api/suggestions',
   primaryColor = '#0d9488',
   secondaryColor = '#0f766e',
   glowColor = 'rgba(13, 148, 136, 0.4)',
   labels: labelOverrides,
   jiggleInterval = 30000,
-  loginComponent,
-  authHeader,
   className = '',
   zIndex = 1000,
 }: SuggestionsFabProps) {
   const labels = { ...DEFAULT_LABELS, ...labelOverrides };
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { openModal } = useSuggestionsModal();
   const [shouldJiggle, setShouldJiggle] = useState(false);
 
   useEffect(() => {
@@ -67,7 +61,7 @@ export function SuggestionsFab({
     <>
       <button
         id={fabId}
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => openModal()}
         className={[
           'fixed bottom-[30px] right-[30px]',
           'max-sm:bottom-[20px] max-sm:right-[20px]',
@@ -94,22 +88,6 @@ export function SuggestionsFab({
           💡
         </span>
       </button>
-
-      {isModalOpen && (
-        <SuggestionsModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          isAuthenticated={isAuthenticated}
-          userId={userId}
-          isAdmin={isAdmin}
-          apiBasePath={apiBasePath}
-          primaryColor={primaryColor}
-          glowColor={glowColor}
-          labels={labels}
-          loginComponent={loginComponent}
-          authHeader={authHeader}
-        />
-      )}
 
       <style>{`
         @keyframes suggestions-float-glow {

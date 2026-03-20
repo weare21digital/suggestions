@@ -4,7 +4,6 @@ export { SubmitForm } from './SubmitForm';
 export { MySuggestions } from './MySuggestions';
 export { BugReportButton } from './BugReportButton';
 export { SuggestionsProvider, useSuggestionsModal } from './SuggestionsProvider';
-
 export type { SuggestionsFabProps } from './SuggestionsFab';
 export type { SuggestionsModalProps } from './SuggestionsModal';
 export type { SubmitFormProps } from './SubmitForm';
