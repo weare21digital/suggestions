@@ -1,0 +1,50 @@
+"use strict";
+// @21digital/suggestions - Core Types
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_CONFIG = exports.DEFAULT_LABELS = void 0;
+exports.DEFAULT_LABELS = {
+    fabAriaLabel: 'Submit a suggestion',
+    fabTitle: 'Got an idea? Let us know!',
+    closeModal: 'Close',
+    submitNew: 'Submit New',
+    mySuggestions: 'My Suggestions',
+    typeLabel: 'What type of feedback?',
+    typeSuggestion: '💡 Suggestion',
+    typeBug: '🐛 Bug Report',
+    titleLabel: 'Title',
+    titlePlaceholder: 'Brief summary of your idea...',
+    descriptionLabel: 'Description',
+    descriptionPlaceholder: 'Describe your suggestion in detail...',
+    submit: 'Submit',
+    submitting: 'Submitting...',
+    submitted: 'Thank you! Your suggestion has been submitted.',
+    loginRequired: 'Please sign in to submit suggestions.',
+    titleRequired: 'Title is required.',
+    descriptionTooShort: 'Description must be at least {min} characters.',
+    submitFailed: 'Failed to submit. Please try again.',
+    loadFailed: 'Failed to load suggestions.',
+    noSuggestions: 'No suggestions yet.',
+    noSuggestionsSubtext: 'Submit your first idea using the form!',
+    loginToView: 'Sign in to view your suggestions.',
+    previous: 'Previous',
+    next: 'Next',
+    adminReplies: 'Admin Replies ({count})',
+    charactersCount: '{count} / {max}',
+    charactersMinimum: '{count} / {min} minimum',
+    submittedOn: 'Submitted on {date}',
+    page: 'Page {current} of {total}',
+};
+exports.DEFAULT_CONFIG = {
+    rateLimit: {
+        maxPerWindow: 5,
+        windowHours: 24,
+        minGapMinutes: 0,
+    },
+    maxTitleLength: 255,
+    maxDescriptionLength: 5000,
+    minDescriptionLength: 100,
+    types: ['suggestion', 'bug'],
+    statuses: ['open', 'reviewing', 'planned', 'implemented', 'declined'],
+    onNewSuggestion: () => { },
+    onStatusChange: () => { },
+};
