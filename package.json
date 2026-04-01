@@ -1,6 +1,6 @@
 {
   "name": "@21digital/suggestions",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Reusable suggestions/feedback system with floating FAB, modal UI, admin tools, and store-agnostic backend",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

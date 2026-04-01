@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SuggestionsLabels } from '../lib/types';
+import type { SuggestionsLabels, ModalComponentType } from '../lib/types';
 export interface ModalOpenOptions {
     mode?: 'suggestion' | 'bug';
     entityType?: string;
@@ -22,6 +22,8 @@ export interface SuggestionsProviderProps {
     labels?: Partial<SuggestionsLabels>;
     loginComponent?: React.ReactNode;
     authHeader?: string;
+    /** Optional host-provided modal wrapper. When provided, replaces the built-in backdrop + modal chrome. */
+    ModalComponent?: ModalComponentType;
 }
-export declare function SuggestionsProvider({ children, isAuthenticated, userId, isAdmin, apiBasePath, primaryColor, glowColor, labels: labelOverrides, loginComponent, authHeader, }: SuggestionsProviderProps): import("react/jsx-runtime").JSX.Element;
+export declare function SuggestionsProvider({ children, isAuthenticated, userId, isAdmin, apiBasePath, primaryColor, glowColor, labels: labelOverrides, loginComponent, authHeader, ModalComponent, }: SuggestionsProviderProps): import("react/jsx-runtime").JSX.Element;
 export declare function useSuggestionsModal(): SuggestionsContextValue;

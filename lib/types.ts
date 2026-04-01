@@ -1,5 +1,17 @@
 // @21digital/suggestions - Core Types
 
+import type React from 'react';
+
+/** Props that a host-provided modal wrapper must accept. */
+export interface ModalComponentProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+/** A React component that wraps modal content with its own backdrop + chrome. */
+export type ModalComponentType = React.ComponentType<ModalComponentProps>;
+
 export type SuggestionType = 'suggestion' | 'bug';
 
 export type SuggestionStatus =

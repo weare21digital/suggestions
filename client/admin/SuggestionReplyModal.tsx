@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { parseReplies } from '../../lib/parse-replies';
-import type { SuggestionWithEmail, SuggestionStatus } from '../../lib/types';
+import type { SuggestionWithEmail, SuggestionStatus, ModalComponentType } from '../../lib/types';
 
 const STATUS_OPTIONS: { value: SuggestionStatus; label: string; color: string }[] = [
   { value: 'open', label: 'Open', color: 'bg-blue-100 text-blue-800' },
@@ -21,6 +21,8 @@ export interface SuggestionReplyModalProps {
   adminApiPath?: string;
   /** Primary accent color. Default: '#0d9488' */
   primaryColor?: string;
+  /** Optional host-provided modal wrapper. Replaces the built-in backdrop + modal chrome. */
+  ModalComponent?: ModalComponentType;
 }
 
 export function SuggestionReplyModal({
@@ -30,6 +32,7 @@ export function SuggestionReplyModal({
   onSave,
   adminApiPath = '/api/admin/suggestions',
   primaryColor = '#0d9488',
+  ModalComponent,
 }: SuggestionReplyModalProps) {
   const [status, setStatus] = useState<SuggestionStatus>(suggestion.status);
   const [adminReply, setAdminReply] = useState('');
@@ -55,7 +58,7 @@ export function SuggestionReplyModal({
     prevReplyCountRef.current = replies.length;
   }, [suggestion.adminReply]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !ModalComponent) return null;
 
   const handleStatusUpdate = async () => {
     setError(null);
@@ -130,25 +133,21 @@ export function SuggestionReplyModal({
     }
   };
 
-  return (
+  const replyContent = (
     <>
-      <div className="fixed inset-0 bg-black/50 z-[1001]" onClick={onClose} />
-      <div className="fixed inset-0 z-[1002] flex items-center justify-center p-4">
-        <div
-          className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Review Suggestion</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                <path d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+      {/* Header — only when using built-in modal */}
+      {!ModalComponent && (
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Review Suggestion</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <svg className="w-5 h-5" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
-          <div className="p-6">
+      <div className="p-6">
             {/* Suggestion Details */}
             <div className="mb-6 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
               <span className="text-xs font-medium text-gray-500 uppercase">Suggestion #{suggestion.id}</span>
@@ -257,16 +256,38 @@ export function SuggestionReplyModal({
               </button>
             </div>
           </div>
+
+          <style>{`
+            @keyframes suggestions-slide-in {
+              from { opacity: 0; transform: translateY(-20px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            .suggestions-slide-in { animation: suggestions-slide-in 0.6s ease-out; }
+          `}</style>
+    </>
+  );
+
+  // If host provided a ModalComponent, delegate backdrop + chrome to it
+  if (ModalComponent) {
+    return (
+      <ModalComponent isOpen={isOpen} onClose={onClose}>
+        {replyContent}
+      </ModalComponent>
+    );
+  }
+
+  // Built-in modal (backward compatible)
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 z-[1001]" onClick={onClose} />
+      <div className="fixed inset-0 z-[1002] flex items-center justify-center p-4">
+        <div
+          className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {replyContent}
         </div>
       </div>
-
-      <style>{`
-        @keyframes suggestions-slide-in {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .suggestions-slide-in { animation: suggestions-slide-in 0.6s ease-out; }
-      `}</style>
     </>
   );
 }

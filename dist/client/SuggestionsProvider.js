@@ -8,7 +8,7 @@ const react_1 = require("react");
 const SuggestionsModal_1 = require("./SuggestionsModal");
 const types_1 = require("../lib/types");
 const SuggestionsContext = (0, react_1.createContext)(null);
-function SuggestionsProvider({ children, isAuthenticated, userId, isAdmin, apiBasePath = '/api/suggestions', primaryColor = '#0d9488', glowColor, labels: labelOverrides, loginComponent, authHeader, }) {
+function SuggestionsProvider({ children, isAuthenticated, userId, isAdmin, apiBasePath = '/api/suggestions', primaryColor = '#0d9488', glowColor, labels: labelOverrides, loginComponent, authHeader, ModalComponent, }) {
     const labels = { ...types_1.DEFAULT_LABELS, ...labelOverrides };
     const [isOpen, setIsOpen] = (0, react_1.useState)(false);
     const [modalOptions, setModalOptions] = (0, react_1.useState)({});
@@ -20,7 +20,7 @@ function SuggestionsProvider({ children, isAuthenticated, userId, isAdmin, apiBa
         setIsOpen(false);
         setModalOptions({});
     }, []);
-    return ((0, jsx_runtime_1.jsxs)(SuggestionsContext.Provider, { value: { openModal, closeModal, isOpen }, children: [children, (0, jsx_runtime_1.jsx)(SuggestionsModal_1.SuggestionsModal, { isOpen: isOpen, onClose: closeModal, isAuthenticated: isAuthenticated, userId: userId, isAdmin: isAdmin, apiBasePath: apiBasePath, primaryColor: primaryColor, glowColor: glowColor, labels: labels, loginComponent: loginComponent, authHeader: authHeader, mode: modalOptions.mode || 'suggestion', entityType: modalOptions.entityType, entityId: modalOptions.entityId, entityLabel: modalOptions.entityLabel })] }));
+    return ((0, jsx_runtime_1.jsxs)(SuggestionsContext.Provider, { value: { openModal, closeModal, isOpen }, children: [children, (0, jsx_runtime_1.jsx)(SuggestionsModal_1.SuggestionsModal, { isOpen: isOpen, onClose: closeModal, isAuthenticated: isAuthenticated, userId: userId, isAdmin: isAdmin, apiBasePath: apiBasePath, primaryColor: primaryColor, glowColor: glowColor, labels: labels, loginComponent: loginComponent, authHeader: authHeader, mode: modalOptions.mode || 'suggestion', entityType: modalOptions.entityType, entityId: modalOptions.entityId, entityLabel: modalOptions.entityLabel, ModalComponent: ModalComponent })] }));
 }
 function useSuggestionsModal() {
     const context = (0, react_1.useContext)(SuggestionsContext);

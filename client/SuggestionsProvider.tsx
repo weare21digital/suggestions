@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { SuggestionsModal } from './SuggestionsModal';
-import type { SuggestionsLabels } from '../lib/types';
+import type { SuggestionsLabels, ModalComponentType } from '../lib/types';
 import { DEFAULT_LABELS } from '../lib/types';
 
 export interface ModalOpenOptions {
@@ -31,6 +31,8 @@ export interface SuggestionsProviderProps {
   labels?: Partial<SuggestionsLabels>;
   loginComponent?: React.ReactNode;
   authHeader?: string;
+  /** Optional host-provided modal wrapper. When provided, replaces the built-in backdrop + modal chrome. */
+  ModalComponent?: ModalComponentType;
 }
 
 export function SuggestionsProvider({
@@ -44,6 +46,7 @@ export function SuggestionsProvider({
   labels: labelOverrides,
   loginComponent,
   authHeader,
+  ModalComponent,
 }: SuggestionsProviderProps) {
   const labels = { ...DEFAULT_LABELS, ...labelOverrides };
   const [isOpen, setIsOpen] = useState(false);
@@ -78,6 +81,7 @@ export function SuggestionsProvider({
         entityType={modalOptions.entityType}
         entityId={modalOptions.entityId}
         entityLabel={modalOptions.entityLabel}
+        ModalComponent={ModalComponent}
       />
     </SuggestionsContext.Provider>
   );
